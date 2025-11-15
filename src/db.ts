@@ -21,10 +21,49 @@ export const initDatabase = async () => {
     `);
 
     console.log("Database initialized successfully");
+
+    // Seed sample data if table is empty
+    await seedSampleData();
+
     return true;
   } catch (error) {
     console.error("Error initializing database:", error);
     return false;
+  }
+};
+
+/**
+ * Seed sample data if the table is empty
+ */
+export const seedSampleData = async () => {
+  try {
+    // Check if table is empty
+    const result = await db.getFirstAsync<{ count: number }>(
+      "SELECT COUNT(*) as count FROM grocery_items"
+    );
+
+    if (result && result.count === 0) {
+      console.log("Table is empty, seeding sample data...");
+
+      const sampleItems = [
+        { name: "Sữa", quantity: 2, category: "Đồ uống" },
+        { name: "Trứng", quantity: 10, category: "Thực phẩm tươi sống" },
+        { name: "Bánh mì", quantity: 1, category: "Thực phẩm khô" },
+      ];
+
+      for (const item of sampleItems) {
+        await db.runAsync(
+          "INSERT INTO grocery_items (name, quantity, category, bought, created_at) VALUES (?, ?, ?, 0, ?)",
+          [item.name, item.quantity, item.category, Date.now()]
+        );
+      }
+
+      console.log("Sample data seeded successfully");
+    } else {
+      console.log(`Table already has ${result?.count} items, skipping seed`);
+    }
+  } catch (error) {
+    console.error("Error seeding sample data:", error);
   }
 };
 

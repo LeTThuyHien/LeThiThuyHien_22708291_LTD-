@@ -2,17 +2,24 @@ import { Link } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { Text, View, ActivityIndicator } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { initDatabase } from "../db";
+import { initDatabase, getAllItems } from "../db";
 
 export default function Page() {
   const [dbInitialized, setDbInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [itemCount, setItemCount] = useState(0);
 
   useEffect(() => {
     const setupDatabase = async () => {
       try {
         const success = await initDatabase();
         setDbInitialized(success);
+
+        // Get item count after initialization
+        if (success) {
+          const items = await getAllItems();
+          setItemCount(items.length);
+        }
       } catch (error) {
         console.error("Failed to initialize database:", error);
         setDbInitialized(false);
@@ -36,13 +43,19 @@ export default function Page() {
   return (
     <View className="flex flex-1">
       <Header />
-      <Content dbInitialized={dbInitialized} />
+      <Content dbInitialized={dbInitialized} itemCount={itemCount} />
       <Footer />
     </View>
   );
 }
 
-function Content({ dbInitialized }: { dbInitialized: boolean }) {
+function Content({
+  dbInitialized,
+  itemCount,
+}: {
+  dbInitialized: boolean;
+  itemCount: number;
+}) {
   return (
     <View className="flex-1">
       <View className="py-12 md:py-24 lg:py-32 xl:py-48">
@@ -66,6 +79,14 @@ function Content({ dbInitialized }: { dbInitialized: boolean }) {
                 <Text className="text-sm text-gray-600">
                   SQLite connection established
                 </Text>
+                <Text className="text-sm text-blue-600 font-medium mt-2">
+                  📦 {itemCount} items in database
+                </Text>
+                {itemCount === 3 && (
+                  <Text className="text-xs text-gray-500 italic">
+                    (Sample data seeded)
+                  </Text>
+                )}
               </View>
             ) : (
               <View className="items-center gap-2">
