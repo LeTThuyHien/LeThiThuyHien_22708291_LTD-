@@ -1,16 +1,41 @@
 import * as SQLite from "expo-sqlite";
+import { Platform } from "react-native";
 
 // Database instance - will be initialized lazily
 let db: SQLite.SQLiteDatabase | null = null;
+let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
 /**
- * Get or create the database instance
+ * Get or create the database instance asynchronously
  */
-const getDatabase = () => {
-  if (!db) {
-    db = SQLite.openDatabaseSync("grocery.db");
+const getDatabase = async (): Promise<SQLite.SQLiteDatabase> => {
+  if (db) {
+    return db;
   }
-  return db;
+
+  // If already initializing, wait for it
+  if (dbPromise) {
+    return dbPromise;
+  }
+
+  // Create new initialization promise
+  dbPromise = (async () => {
+    try {
+      // Use async version for web, sync for native
+      if (Platform.OS === "web") {
+        db = await SQLite.openDatabaseAsync("grocery.db");
+      } else {
+        db = SQLite.openDatabaseSync("grocery.db");
+      }
+      return db;
+    } catch (error) {
+      console.error("Error opening database:", error);
+      dbPromise = null;
+      throw error;
+    }
+  })();
+
+  return dbPromise;
 };
 
 /**
@@ -18,7 +43,7 @@ const getDatabase = () => {
  */
 export const initDatabase = async () => {
   try {
-    const database = getDatabase();
+    const database = await getDatabase();
 
     // Create grocery_items table if it doesn't exist
     await database.execAsync(`
@@ -49,8 +74,10 @@ export const initDatabase = async () => {
  */
 export const seedSampleData = async () => {
   try {
+    const database = await getDatabase();
+
     // Check if table is empty
-    const result = await db.getFirstAsync<{ count: number }>(
+    const result = await database.getFirstAsync<{ count: number }>(
       "SELECT COUNT(*) as count FROM grocery_items"
     );
 
@@ -64,7 +91,7 @@ export const seedSampleData = async () => {
       ];
 
       for (const item of sampleItems) {
-        await db.runAsync(
+        await database.runAsync(
           "INSERT INTO grocery_items (name, quantity, category, bought, created_at) VALUES (?, ?, ?, 0, ?)",
           [item.name, item.quantity, item.category, Date.now()]
         );
@@ -84,7 +111,8 @@ export const seedSampleData = async () => {
  */
 export const getAllItems = async () => {
   try {
-    const result = await db.getAllAsync(
+    const database = await getDatabase();
+    const result = await database.getAllAsync(
       "SELECT * FROM grocery_items ORDER BY created_at DESC"
     );
     return result;
@@ -103,7 +131,8 @@ export const addItem = async (
   category: string
 ) => {
   try {
-    const result = await db.runAsync(
+    const database = await getDatabase();
+    const result = await database.runAsync(
       "INSERT INTO grocery_items (name, quantity, category, bought, created_at) VALUES (?, ?, ?, 0, ?)",
       [name, quantity, category, Date.now()]
     );
@@ -124,7 +153,8 @@ export const updateItem = async (
   category: string
 ) => {
   try {
-    await db.runAsync(
+    const database = await getDatabase();
+    await database.runAsync(
       "UPDATE grocery_items SET name = ?, quantity = ?, category = ? WHERE id = ?",
       [name, quantity, category, id]
     );
@@ -140,10 +170,11 @@ export const updateItem = async (
  */
 export const toggleBoughtStatus = async (id: number, bought: number) => {
   try {
-    await db.runAsync("UPDATE grocery_items SET bought = ? WHERE id = ?", [
-      bought,
-      id,
-    ]);
+    const database = await getDatabase();
+    await database.runAsync(
+      "UPDATE grocery_items SET bought = ? WHERE id = ?",
+      [bought, id]
+    );
     return true;
   } catch (error) {
     console.error("Error toggling bought status:", error);
@@ -156,7 +187,8 @@ export const toggleBoughtStatus = async (id: number, bought: number) => {
  */
 export const deleteItem = async (id: number) => {
   try {
-    await db.runAsync("DELETE FROM grocery_items WHERE id = ?", [id]);
+    const database = await getDatabase();
+    await database.runAsync("DELETE FROM grocery_items WHERE id = ?", [id]);
     return true;
   } catch (error) {
     console.error("Error deleting item:", error);
@@ -169,7 +201,8 @@ export const deleteItem = async (id: number) => {
  */
 export const deleteAllBoughtItems = async () => {
   try {
-    await db.runAsync("DELETE FROM grocery_items WHERE bought = 1");
+    const database = await getDatabase();
+    await database.runAsync("DELETE FROM grocery_items WHERE bought = 1");
     return true;
   } catch (error) {
     console.error("Error deleting bought items:", error);
@@ -182,12 +215,11 @@ export const deleteAllBoughtItems = async () => {
  */
 export const clearAllItems = async () => {
   try {
-    await db.runAsync("DELETE FROM grocery_items");
+    const database = await getDatabase();
+    await database.runAsync("DELETE FROM grocery_items");
     return true;
   } catch (error) {
     console.error("Error clearing all items:", error);
     return false;
   }
 };
-
-export default db;

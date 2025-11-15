@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { getAllItems } from "../db";
+import AddItemModal from "./AddItemModal";
 
 interface GroceryItem {
   id: number;
@@ -22,6 +23,7 @@ export default function GroceryList() {
   const [items, setItems] = useState<GroceryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
 
   // Load items from database
   const loadItems = async () => {
@@ -43,6 +45,11 @@ export default function GroceryList() {
   // Handle pull to refresh
   const onRefresh = () => {
     setRefreshing(true);
+    loadItems();
+  };
+
+  // Handle item added
+  const handleItemAdded = () => {
     loadItems();
   };
 
@@ -132,6 +139,22 @@ export default function GroceryList() {
         refreshing={refreshing}
         onRefresh={onRefresh}
         showsVerticalScrollIndicator={false}
+      />
+
+      {/* Floating Action Button */}
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => setModalVisible(true)}
+        activeOpacity={0.8}
+      >
+        <Text style={styles.fabIcon}>+</Text>
+      </TouchableOpacity>
+
+      {/* Add Item Modal */}
+      <AddItemModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        onItemAdded={handleItemAdded}
       />
     </View>
   );
@@ -271,5 +294,26 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#6B7280",
     textAlign: "center",
+  },
+  fab: {
+    position: "absolute",
+    right: 20,
+    bottom: 20,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "#4F46E5",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  fabIcon: {
+    fontSize: 32,
+    color: "#FFFFFF",
+    fontWeight: "300",
   },
 });
