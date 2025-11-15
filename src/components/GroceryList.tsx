@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from "react-native";
-import { getAllItems } from "../db";
+import { getAllItems, toggleBoughtStatus } from "../db";
 import AddItemModal from "./AddItemModal";
 
 interface GroceryItem {
@@ -53,11 +53,31 @@ export default function GroceryList() {
     loadItems();
   };
 
+  // Handle toggle bought status
+  const handleToggleBought = async (item: GroceryItem) => {
+    try {
+      const newBoughtStatus = item.bought === 1 ? 0 : 1;
+      const success = await toggleBoughtStatus(item.id, newBoughtStatus);
+
+      if (success) {
+        // Update local state immediately for smooth UI
+        setItems((prevItems) =>
+          prevItems.map((i) =>
+            i.id === item.id ? { ...i, bought: newBoughtStatus } : i
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Error toggling bought status:", error);
+    }
+  };
+
   // Render each grocery item
   const renderItem = ({ item }: { item: GroceryItem }) => (
     <TouchableOpacity
       style={[styles.itemCard, item.bought === 1 && styles.itemCardBought]}
       activeOpacity={0.7}
+      onPress={() => handleToggleBought(item)}
     >
       <View style={styles.itemContent}>
         <View style={styles.itemHeader}>
