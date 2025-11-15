@@ -1,19 +1,48 @@
 import { Link } from "expo-router";
-import React from "react";
-import { Text, View } from "react-native";
+import React, { useEffect, useState } from "react";
+import { Text, View, ActivityIndicator } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { initDatabase } from "../db";
 
 export default function Page() {
+  const [dbInitialized, setDbInitialized] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const setupDatabase = async () => {
+      try {
+        const success = await initDatabase();
+        setDbInitialized(success);
+      } catch (error) {
+        console.error("Failed to initialize database:", error);
+        setDbInitialized(false);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    setupDatabase();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <View className="flex flex-1 items-center justify-center">
+        <ActivityIndicator size="large" />
+        <Text className="mt-4">Initializing database...</Text>
+      </View>
+    );
+  }
+
   return (
     <View className="flex flex-1">
       <Header />
-      <Content />
+      <Content dbInitialized={dbInitialized} />
       <Footer />
     </View>
   );
 }
 
-function Content() {
+function Content({ dbInitialized }: { dbInitialized: boolean }) {
   return (
     <View className="flex-1">
       <View className="py-12 md:py-24 lg:py-32 xl:py-48">
@@ -23,19 +52,39 @@ function Content() {
               role="heading"
               className="text-3xl text-center native:text-5xl font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl"
             >
-              Welcome to Project ACME
+              Grocery List App
             </Text>
             <Text className="mx-auto max-w-[700px] text-lg text-center text-gray-500 md:text-xl dark:text-gray-400">
-              Discover and collaborate on acme. Explore our services now.
+              Quản lý danh sách món cần mua khi đi chợ/siêu thị
             </Text>
 
-            <View className="gap-4">
+            {dbInitialized ? (
+              <View className="items-center gap-2">
+                <Text className="text-green-600 font-semibold">
+                  ✓ Database initialized successfully
+                </Text>
+                <Text className="text-sm text-gray-600">
+                  SQLite connection established
+                </Text>
+              </View>
+            ) : (
+              <View className="items-center gap-2">
+                <Text className="text-red-600 font-semibold">
+                  ✗ Database initialization failed
+                </Text>
+                <Text className="text-sm text-gray-600">
+                  Please check the console for errors
+                </Text>
+              </View>
+            )}
+
+            <View className="gap-4 mt-4">
               <Link
                 suppressHighlighting
                 className="flex h-9 items-center justify-center overflow-hidden rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-gray-50 web:shadow ios:shadow transition-colors hover:bg-gray-900/90 active:bg-gray-400/90 web:focus-visible:outline-none web:focus-visible:ring-1 focus-visible:ring-gray-950 disabled:pointer-events-none disabled:opacity-50 dark:bg-gray-50 dark:text-gray-900 dark:hover:bg-gray-50/90 dark:focus-visible:ring-gray-300"
                 href="/"
               >
-                Explore
+                Get Started
               </Link>
             </View>
           </View>
