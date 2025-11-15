@@ -24,6 +24,7 @@ export default function GroceryList() {
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  const [editingItem, setEditingItem] = useState<GroceryItem | null>(null);
 
   // Load items from database
   const loadItems = async () => {
@@ -72,12 +73,25 @@ export default function GroceryList() {
     }
   };
 
+  // Handle edit item
+  const handleEditItem = (item: GroceryItem) => {
+    setEditingItem(item);
+    setModalVisible(true);
+  };
+
+  // Handle modal close
+  const handleModalClose = () => {
+    setModalVisible(false);
+    setEditingItem(null);
+  };
+
   // Render each grocery item
   const renderItem = ({ item }: { item: GroceryItem }) => (
     <TouchableOpacity
       style={[styles.itemCard, item.bought === 1 && styles.itemCardBought]}
       activeOpacity={0.7}
       onPress={() => handleToggleBought(item)}
+      onLongPress={() => handleEditItem(item)}
     >
       <View style={styles.itemContent}>
         <View style={styles.itemHeader}>
@@ -164,17 +178,21 @@ export default function GroceryList() {
       {/* Floating Action Button */}
       <TouchableOpacity
         style={styles.fab}
-        onPress={() => setModalVisible(true)}
+        onPress={() => {
+          setEditingItem(null);
+          setModalVisible(true);
+        }}
         activeOpacity={0.8}
       >
         <Text style={styles.fabIcon}>+</Text>
       </TouchableOpacity>
 
-      {/* Add Item Modal */}
+      {/* Add/Edit Item Modal */}
       <AddItemModal
         visible={modalVisible}
-        onClose={() => setModalVisible(false)}
+        onClose={handleModalClose}
         onItemAdded={handleItemAdded}
+        editItem={editingItem}
       />
     </View>
   );

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -11,24 +11,46 @@ import {
   Platform,
   ScrollView,
 } from "react-native";
-import { addItem } from "../db";
+import { addItem, updateItem } from "../db";
+
+interface GroceryItem {
+  id: number;
+  name: string;
+  quantity: number;
+  category: string;
+  bought: number;
+  created_at: number;
+}
 
 interface AddItemModalProps {
   visible: boolean;
   onClose: () => void;
   onItemAdded: () => void;
+  editItem?: GroceryItem | null;
 }
 
 export default function AddItemModal({
   visible,
   onClose,
   onItemAdded,
+  editItem = null,
 }: AddItemModalProps) {
   const [name, setName] = useState("");
   const [quantity, setQuantity] = useState("1");
   const [category, setCategory] = useState("");
   const [nameError, setNameError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Populate form when editing
+  useEffect(() => {
+    if (editItem) {
+      setName(editItem.name);
+      setQuantity(editItem.quantity.toString());
+      setCategory(editItem.category || "");
+    } else {
+      resetForm();
+    }
+  }, [editItem, visible]);
 
   // Reset form
   const resetForm = () => {
@@ -64,16 +86,38 @@ export default function AddItemModal({
 
     try {
       const quantityNum = parseInt(quantity) || 1;
-      const result = await addItem(name.trim(), quantityNum, category.trim());
 
-      if (result) {
-        console.log("Item added successfully with ID:", result);
-        Alert.alert("Thành công", "Đã thêm món vào danh sách!");
-        resetForm();
-        onItemAdded(); // Trigger list refresh
-        onClose();
+      if (editItem) {
+        // Update existing item
+        const success = await updateItem(
+          editItem.id,
+          name.trim(),
+          quantityNum,
+          category.trim()
+        );
+
+        if (success) {
+          console.log("Item updated successfully:", editItem.id);
+          Alert.alert("Thành công", "Đã cập nhật món!");
+          resetForm();
+          onItemAdded(); // Trigger list refresh
+          onClose();
+        } else {
+          Alert.alert("Lỗi", "Không thể cập nhật món. Vui lòng thử lại!");
+        }
       } else {
-        Alert.alert("Lỗi", "Không thể thêm món. Vui lòng thử lại!");
+        // Add new item
+        const result = await addItem(name.trim(), quantityNum, category.trim());
+
+        if (result) {
+          console.log("Item added successfully with ID:", result);
+          Alert.alert("Thành công", "Đã thêm món vào danh sách!");
+          resetForm();
+          onItemAdded(); // Trigger list refresh
+          onClose();
+        } else {
+          Alert.alert("Lỗi", "Không thể thêm món. Vui lòng thử lại!");
+        }
       }
     } catch (error) {
       console.error("Error saving item:", error);
@@ -107,9 +151,13 @@ export default function AddItemModal({
           >
             {/* Header */}
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Thêm Món Mới</Text>
+              <Text style={styles.modalTitle}>
+                {editItem ? "Sửa Món" : "Thêm Món Mới"}
+              </Text>
               <Text style={styles.modalSubtitle}>
-                Nhập thông tin món cần mua
+                {editItem
+                  ? "Cập nhật thông tin món"
+                  : "Nhập thông tin món cần mua"}
               </Text>
             </View>
 
