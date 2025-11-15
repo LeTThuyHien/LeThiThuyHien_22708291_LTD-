@@ -1,15 +1,27 @@
 import * as SQLite from "expo-sqlite";
 
-// Open or create the database
-const db = SQLite.openDatabaseSync("grocery.db");
+// Database instance - will be initialized lazily
+let db: SQLite.SQLiteDatabase | null = null;
+
+/**
+ * Get or create the database instance
+ */
+const getDatabase = () => {
+  if (!db) {
+    db = SQLite.openDatabaseSync("grocery.db");
+  }
+  return db;
+};
 
 /**
  * Initialize the database schema
  */
 export const initDatabase = async () => {
   try {
+    const database = getDatabase();
+
     // Create grocery_items table if it doesn't exist
-    await db.execAsync(`
+    await database.execAsync(`
       CREATE TABLE IF NOT EXISTS grocery_items (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
